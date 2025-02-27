@@ -1,15 +1,30 @@
 import os
+import boto3
+import json
 import requests
 from flask import Flask, jsonify
-from dotenv import load_dotenv
-
-# Load environment variables from .env file
-load_dotenv()
 
 app = Flask(__name__)
 
-# Get the API key from environment variables
-API_KEY = os.getenv("OPENWEATHER_API_KEY")
+# AWS Secrets Manager Config
+SECRET_NAME = "weather-api-key"
+REGION_NAME = "us-east-1"  # Change this to your AWS region
+
+def get_secret():
+    """Fetch the API key from AWS Secrets Manager."""
+    session = boto3.session.Session()
+    client = session.client(service_name="secretsmanager", region_name=REGION_NAME)
+
+    try:
+        response = client.get_secret_value(SecretId=SECRET_NAME)
+        secret = json.loads(response["SecretString"])
+        return secret["OPENWEATHER_API_KEY"]
+    except Exception as e:
+        print(f"Error fetching secret: {e}")
+        return None
+
+# Fetch API key from AWS Secrets Manager
+API_KEY = get_secret()
 BASE_URL = "https://api.openweathermap.org/data/2.5/weather"
 
 @app.route('/')
